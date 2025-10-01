@@ -1,4 +1,6 @@
 import type { BunRequest } from "bun";
+
+import { getAssetDiskPath, getAssetURL, mediaTypeToExt } from "./assets";
 import { getBearerToken, validateJWT } from "../auth";
 import type { ApiConfig } from "../config";
 import { getVideo, updateVideo } from "../db/videos";
@@ -41,15 +43,14 @@ export async function handlerUploadThumbnail(cfg: ApiConfig, req: BunRequest) {
     throw new BadRequestError("Missing Content-Type for thumbnail");
   }
 
-  const base64EncodedThumbnailFile = Buffer.from(
-    await file.arrayBuffer()
-  ).toString("base64");
-  if (!base64EncodedThumbnailFile) {
-    throw new Error("Error reading file data");
-  }
+  const fileExtension = mediaTypeToExt(mediaType);
+  const filename = `${videoId}${fileExtension}`;
 
-  const base64DataURL = `data:${mediaType};base64,${base64EncodedThumbnailFile}`;
-  video.thumbnailURL = base64DataURL;
+  const assetDiskPath = getAssetDiskPath(cfg, filename);
+  await Bun.write(assetDiskPath, file);
+
+  const urlPath = getAssetURL(cfg, filename);
+  video.thumbnailURL = urlPath;
   updateVideo(cfg.db, video);
 
   return respondWithJSON(200, video);
