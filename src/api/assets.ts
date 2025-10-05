@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import { existsSync, mkdirSync } from "fs";
 import path from "path";
 
@@ -19,6 +20,13 @@ export function mediaTypeToExt(mediaType: string) {
 
 export function getAssetDiskPath(cfg: ApiConfig, assetPath: string) {
   return path.join(cfg.assetsRoot, assetPath);
+}
+
+export function getAssetPath(mediaType: string) {
+  const base = randomBytes(32);
+  const id = base.toString("base64url");
+  const ext = mediaTypeToExt(mediaType);
+  return id + ext;
 }
 
 export function getAssetURL(cfg: ApiConfig, assetPath: string) {
