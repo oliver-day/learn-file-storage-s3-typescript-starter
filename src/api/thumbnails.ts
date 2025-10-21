@@ -1,12 +1,6 @@
 import type { BunRequest } from "bun";
-import { randomBytes } from "crypto";
 
-import {
-  getAssetDiskPath,
-  getAssetPath,
-  getAssetURL,
-  mediaTypeToExt,
-} from "./assets";
+import { getAssetDiskPath, getAssetPath, getAssetURL } from "./assets";
 import { getBearerToken, validateJWT } from "../auth";
 import type { ApiConfig } from "../config";
 import { getVideo, updateVideo } from "../db/videos";
