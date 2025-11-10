@@ -32,3 +32,46 @@ export function getAssetPath(mediaType: string) {
 export function getAssetURL(cfg: ApiConfig, assetPath: string) {
   return `http://localhost:${cfg.port}/assets/${assetPath}`;
 }
+
+export async function getVideoAspectRatio(filePath: string) {
+  const process = Bun.spawn(
+    [
+      "ffprobe",
+      "-v",
+      "error",
+      "-select_streams",
+      "v:0",
+      "-show_entries",
+      "stream=width,height",
+      "-of",
+      "json",
+      filePath,
+    ],
+    {
+      stdout: "pipe",
+      stderr: "pipe",
+    }
+  );
+
+  const outputText = await new Response(process.stdout).text();
+  const errorText = await new Response(process.stderr).text();
+
+  const exitCode = await process.exited;
+
+  if (exitCode !== 0) {
+    throw new Error(`ffprobe error: ${errorText}`);
+  }
+
+  const output = JSON.parse(outputText);
+  if (!output.streams || output.streams.length === 0) {
+    throw new Error("No video streams found");
+  }
+
+  const { width, height } = output.streams[0];
+
+  return width === Math.floor(16 * (height / 9))
+    ? "landscape"
+    : height === Math.floor(16 * (width / 9))
+    ? "portrait"
+    : "other";
+}

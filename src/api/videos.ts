@@ -2,6 +2,7 @@ import type { BunRequest } from "bun";
 import { rm } from "fs/promises";
 import path from "path";
 
+import { getVideoAspectRatio } from "./assets";
 import { getBearerToken, validateJWT } from "../auth";
 import { type ApiConfig } from "../config";
 import { getVideo, updateVideo } from "../db/videos";
@@ -42,8 +43,9 @@ export async function handlerUploadVideo(cfg: ApiConfig, req: BunRequest) {
 
   const tempFilePath = path.join("/tmp", `${videoId}.mp4`);
   await Bun.write(tempFilePath, file);
+  const aspectRatio = await getVideoAspectRatio(tempFilePath);
 
-  let key = `${videoId}.mp4`;
+  let key = `${aspectRatio}/${videoId}.mp4`;
   await uploadVideoToS3(cfg, key, tempFilePath, "video/mp4");
 
   const videoURL = `https://${cfg.s3Bucket}.s3.${cfg.s3Region}.amazonaws.com/${key}`;
