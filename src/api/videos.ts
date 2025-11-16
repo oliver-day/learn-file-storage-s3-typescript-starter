@@ -2,7 +2,7 @@ import type { BunRequest } from "bun";
 import { rm } from "fs/promises";
 import path from "path";
 
-import { getVideoAspectRatio } from "./assets";
+import { getVideoAspectRatio, processVideoForFastStart } from "./assets";
 import { getBearerToken, validateJWT } from "../auth";
 import { type ApiConfig } from "../config";
 import { getVideo, updateVideo } from "../db/videos";
@@ -44,15 +44,19 @@ export async function handlerUploadVideo(cfg: ApiConfig, req: BunRequest) {
   const tempFilePath = path.join("/tmp", `${videoId}.mp4`);
   await Bun.write(tempFilePath, file);
   const aspectRatio = await getVideoAspectRatio(tempFilePath);
+  const processedFilePath = await processVideoForFastStart(tempFilePath);
 
   let key = `${aspectRatio}/${videoId}.mp4`;
-  await uploadVideoToS3(cfg, key, tempFilePath, "video/mp4");
+  await uploadVideoToS3(cfg, key, processedFilePath, "video/mp4");
 
   const videoURL = `https://${cfg.s3Bucket}.s3.${cfg.s3Region}.amazonaws.com/${key}`;
   video.videoURL = videoURL;
   updateVideo(cfg.db, video);
 
-  await Promise.all([rm(tempFilePath, { force: true })]);
+  await Promise.all([
+    rm(tempFilePath, { force: true }),
+    rm(processedFilePath, { force: true }),
+  ]);
 
   return respondWithJSON(200, video);
 }
