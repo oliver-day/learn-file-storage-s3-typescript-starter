@@ -8,7 +8,7 @@ import { type ApiConfig } from "../config";
 import { getVideo, updateVideo, type Video } from "../db/videos";
 import { BadRequestError, NotFoundError, UserForbiddenError } from "./errors";
 import { respondWithJSON } from "./json";
-import { generatePresignedURL, uploadVideoToS3 } from "../s3";
+import { uploadVideoToS3 } from "../s3";
 
 export async function handlerUploadVideo(cfg: ApiConfig, req: BunRequest) {
   const MAX_UPLOAD_SIZE = 1 << 30;
@@ -49,7 +49,7 @@ export async function handlerUploadVideo(cfg: ApiConfig, req: BunRequest) {
   let key = `${aspectRatio}/${videoId}.mp4`;
   await uploadVideoToS3(cfg, key, processedFilePath, "video/mp4");
 
-  video.videoURL = key;
+  video.videoURL = `${cfg.s3CfDistribution}/${key}`;
 
   updateVideo(cfg.db, video);
 
@@ -58,17 +58,5 @@ export async function handlerUploadVideo(cfg: ApiConfig, req: BunRequest) {
     rm(processedFilePath, { force: true }),
   ]);
 
-  const signedVideo = await dbVideoToSignedVideo(cfg, video);
-
-  return respondWithJSON(200, signedVideo);
-}
-
-export async function dbVideoToSignedVideo(cfg: ApiConfig, video: Video) {
-  if (!video.videoURL) {
-    return video;
-  }
-
-  video.videoURL = await generatePresignedURL(cfg, video.videoURL, 5 * 60); // expires in 5 minutes
-
-  return video;
+  return respondWithJSON(200, video);
 }
